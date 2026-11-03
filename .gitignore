@@ -7,7 +7,7 @@ dist/
 *.spec
 
 # 本地配置（放百度密钥等，不能提交）
-config.json
+/config.json
 
 # Node
 node_modules/
