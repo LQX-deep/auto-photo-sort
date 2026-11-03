@@ -1,0 +1,21 @@
+{
+  "说明": "每个类别对应若干英文描述（CLIP 对英文理解最好）。修改后运行 tools/gen_text_embeddings.mjs 重新生成 text_embeddings.json。",
+  "categories": [
+    {
+      "name": "人像",
+      "prompts": ["a photo of a person", "a selfie", "a group photo of people", "a portrait photo of a face", "people playing sports or doing activities"]
+    },
+    {
+      "name": "风景",
+      "prompts": ["a landscape photo of nature", "a photo of the sky and clouds", "a photo of mountains", "a photo of the sea or a lake", "a photo of a city street", "a photo of a building"]
+    },
+    {
+      "name": "作业文档",
+      "prompts": ["a screenshot of a computer screen", "a phone screenshot", "a photo of a document with text", "a photo of handwritten homework on paper", "a scanned page of a book", "a receipt or an invoice"]
+    },
+    {
+      "name": "其他",
+      "prompts": ["a photo of food", "a photo of an animal", "a photo of a pet", "a photo of an everyday object", "a cartoon or an illustration"]
+    }
+  ]
+}

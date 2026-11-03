@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 照片整理</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #fff; --text: #1f2328; --muted: #656d76;
+    --border: #d8dee4; --accent: #2563eb; --accent-text: #fff;
+    --ok: #1a7f37; --warn: #9a6700; --danger: #cf222e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0d1117; --card: #161b22; --text: #e6edf3; --muted: #8d96a0;
+      --border: #30363d; --accent: #4493f8; --accent-text: #fff;
+      --ok: #3fb950; --warn: #d29922; --danger: #f85149;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.6 system-ui, -apple-system, "Microsoft YaHei", "PingFang SC", sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 64px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 20px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+          padding: 16px 18px; margin-bottom: 16px; }
+  .card h2 { font-size: 16px; margin: 0 0 10px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  button { font: inherit; padding: 7px 16px; border-radius: 6px; cursor: pointer;
+           border: 1px solid var(--border); background: var(--card); color: var(--text); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+  button.danger { color: var(--danger); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  select { font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--border);
+           background: var(--card); color: var(--text); }
+  progress { width: 100%; height: 10px; margin-top: 8px; }
+  .hint { color: var(--muted); font-size: 13px; }
+  .status { margin-top: 8px; font-size: 14px; }
+  .status.ok { color: var(--ok); } .status.warn { color: var(--warn); } .status.err { color: var(--danger); }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  th { color: var(--muted); font-weight: 500; white-space: nowrap; }
+  td img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; display: block; }
+  td.path { color: var(--muted); font-family: ui-monospace, Consolas, monospace; font-size: 12px; word-break: break-all; }
+  .conf-low { color: var(--warn); }
+  .summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+  .chip { border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; font-size: 13px; }
+  ol { margin: 0; padding-left: 20px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>AI 照片整理</h1>
+  <p class="sub">AI 模型在你的浏览器里运行：照片不上传，不需要密钥，也没有调用次数限制。</p>
+
+  <section class="card">
+    <h2>① 加载 AI 模型</h2>
+    <div class="row">
+      <label>模型下载源：
+        <select id="mirror">
+          <option value="local">本站自带（推荐）</option>
+          <option value="https://huggingface.co/">huggingface.co（国内可能打不开）</option>
+        </select>
+      </label>
+      <button id="loadBtn" class="primary">加载模型</button>
+    </div>
+    <p class="hint">首次加载约 90MB，之后浏览器会缓存，再打开就快了。</p>
+    <progress id="loadProg" value="0" max="100" hidden></progress>
+    <div id="loadStatus" class="status"></div>
+  </section>
+
+  <section class="card">
+    <h2>② 选择照片文件夹并识别</h2>
+    <div class="row">
+      <button id="pickBtn" disabled>选择文件夹</button>
+      <span id="modeHint" class="hint"></span>
+    </div>
+    <input id="fallbackInput" type="file" webkitdirectory multiple hidden>
+    <progress id="scanProg" value="0" max="100" hidden></progress>
+    <div id="scanStatus" class="status"></div>
+  </section>
+
+  <section class="card" id="previewCard" hidden>
+    <h2>③ 预览（可手动改分类），确认后再整理</h2>
+    <div id="summary" class="summary"></div>
+    <div class="row" style="margin-bottom:12px">
+      <button id="applyBtn" class="primary">开始整理</button>
+      <button id="undoBtn" class="danger" hidden>撤销上次整理</button>
+    </div>
+    <div id="applyStatus" class="status"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>预览</th><th>文件名</th><th>分类</th><th>置信度</th><th>整理到</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>安全说明</h2>
+    <ol class="hint">
+      <li>只处理图片（jpg / jpeg / png / webp / bmp / gif），其他文件、快捷方式、子文件夹一律不碰。</li>
+      <li>原图保持不动，整理结果<b>复制</b>到所选文件夹下的「整理后」目录中。</li>
+      <li>同名文件自动加序号，不会覆盖；每次整理都写入「整理后/整理记录.json」，可一键撤销（只删除本工具复制出来的文件）。</li>
+    </ol>
+  </section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
